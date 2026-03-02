@@ -8,10 +8,12 @@ struct UltimateFrisbeeMetricApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TrainingDashboardView()
-                .environmentObject(companionSync)
-                .environmentObject(sessionStore)
-                .environmentObject(sampleStore)
+            NavigationStack {
+                TrainingDashboardView()
+            }
+            .environmentObject(companionSync)
+            .environmentObject(sessionStore)
+            .environmentObject(sampleStore)
         }
     }
 }

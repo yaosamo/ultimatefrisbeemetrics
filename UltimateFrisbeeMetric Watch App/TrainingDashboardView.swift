@@ -28,9 +28,28 @@ struct TrainingDashboardView: View {
     var body: some View {
         List {
             liveSection
-            metricsSection
-            samplingSection
-            settingsSection
+            NavigationLink {
+                MetricsDetailView(manager: manager)
+            } label: {
+                drillDownRow(
+                    title: "Metrics",
+                    subtitle: "\(manager.throwsCount) throws, \(manager.forehandCount)F \(manager.backhandCount)B \(manager.hammerCount)H"
+                )
+            }
+            NavigationLink {
+                SamplingDetailView(
+                    manager: manager,
+                    sampleStore: sampleStore,
+                    watchWrist: $watchWrist,
+                    sampleLabel: $sampleLabel,
+                    showingDeleteAllSamplesConfirmation: $showingDeleteAllSamplesConfirmation
+                )
+            } label: {
+                drillDownRow(
+                    title: "Sampling",
+                    subtitle: "\(sampleStore.totalCount) saved, \(selectedWristTitle) wrist"
+                )
+            }
             historySection
         }
         .navigationTitle("UF Metric")
@@ -82,20 +101,6 @@ struct TrainingDashboardView: View {
         }
     }
 
-    private var metricsSection: some View {
-        Section("Metrics") {
-            metricRow("Throws", value: "\(manager.throwsCount)")
-            metricRow("Forehand", value: "\(manager.forehandCount)")
-            metricRow("F Short/Long", value: "\(manager.forehandShortCount) / \(manager.forehandLongCount)")
-            metricRow("Backhand", value: "\(manager.backhandCount)")
-            metricRow("B Short/Long", value: "\(manager.backhandShortCount) / \(manager.backhandLongCount)")
-            metricRow("Hammer", value: "\(manager.hammerCount)")
-            metricRow("H Short/Long", value: "\(manager.hammerShortCount) / \(manager.hammerLongCount)")
-            metricRow("Rotation", value: String(format: "%.2f", manager.liveRotation))
-            metricRow("Acceleration", value: String(format: "%.2f", manager.liveAcceleration))
-        }
-    }
-
     private var historySection: some View {
         Section("Recent Sessions") {
             if sessionStore.sessions.isEmpty {
@@ -130,84 +135,6 @@ struct TrainingDashboardView: View {
         }
     }
 
-    private var settingsSection: some View {
-        Section("Settings") {
-            Picker("Watch Wrist", selection: $watchWrist) {
-                ForEach(WatchWrist.allCases) { wrist in
-                    Text(wrist.title).tag(wrist.rawValue)
-                }
-            }
-        }
-    }
-
-    private var samplingSection: some View {
-        Section("Sampling") {
-            Picker("Label", selection: $sampleLabel) {
-                ForEach(MotionSampleLabel.allCases) { label in
-                    Text(label.title).tag(label)
-                }
-            }
-
-            metricRow("Total Saved", value: "\(sampleStore.totalCount)")
-            metricRow("Wrist", value: selectedWristTitle)
-            metricRow("Saved", value: "\(sampleStore.count(for: sampleLabel))")
-            if let latestSample = sampleStore.latest(for: sampleLabel) {
-                metricRow("Last", value: durationText(latestSample.duration))
-            }
-
-            if let recordingLabel = manager.sampleRecordingLabel {
-                metricRow("Recording", value: recordingLabel.title)
-                metricRow("Elapsed", value: durationText(manager.elapsedTime))
-                metricRow("Frames", value: "\(manager.sampleFramesCaptured)")
-
-                Button("Stop Recording") {
-                    manager.stopSampleRecording()
-                }
-                .tint(.red)
-            } else {
-                metricRow("Max Length", value: "01:00")
-
-                Button("Start Long Recording") {
-                    manager.startSampleRecording(
-                        label: sampleLabel,
-                        watchWrist: selectedWatchWrist.detectorWrist,
-                        watchWristName: selectedWatchWrist.title
-                    ) { sample in
-                        sampleStore.save(sample: sample)
-                    }
-                }
-                .tint(.blue)
-                .disabled(manager.sessionState == .active)
-
-                Button("Delete Last Sample") {
-                    sampleStore.deleteLatest(for: sampleLabel)
-                }
-                .tint(.orange)
-                .disabled(sampleStore.count(for: sampleLabel) == 0)
-
-                Button("Delete All \(sampleLabel.title)") {
-                    sampleStore.deleteAll(for: sampleLabel)
-                }
-                .tint(.red)
-                .disabled(sampleStore.count(for: sampleLabel) == 0)
-
-                Button("Print All Samples JSON") {
-                    let exported = sampleStore.printAllSamplesJSONToConsole()
-                    manager.setStatusText(
-                        exported ? "Exported JSON to console" : "Export failed"
-                    )
-                }
-                .disabled(sampleStore.totalCount == 0)
-
-                Button("Delete All Samples") {
-                    showingDeleteAllSamplesConfirmation = true
-                }
-                .tint(.red)
-                .disabled(sampleStore.totalCount == 0)
-            }
-        }
-    }
-
     private func durationText(_ duration: TimeInterval) -> String {
         let totalSeconds = Int(duration.rounded(.down))
         let minutes = totalSeconds / 60
@@ -232,6 +159,16 @@ struct TrainingDashboardView: View {
                 .foregroundStyle(.secondary)
         }
     }
+
+    private func drillDownRow(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            Text(subtitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
 }
 
 private extension WatchWrist {
@@ -250,4 +187,144 @@ private extension WatchWrist {
         .environmentObject(CompanionSyncManager())
         .environmentObject(TrainingSessionStore())
         .environmentObject(MotionSampleStore())
+}
+
+private struct MetricsDetailView: View {
+    @ObservedObject var manager: SensorTrainingManager
+
+    var body: some View {
+        List {
+            Section("Metrics") {
+                metricRow("Throws", value: "\(manager.throwsCount)")
+                metricRow("Forehand", value: "\(manager.forehandCount)")
+                metricRow("Backhand", value: "\(manager.backhandCount)")
+                metricRow("Hammer", value: "\(manager.hammerCount)")
+                metricRow("F Short/Long", value: "\(manager.forehandShortCount) / \(manager.forehandLongCount)")
+                metricRow("B Short/Long", value: "\(manager.backhandShortCount) / \(manager.backhandLongCount)")
+                metricRow("H Short/Long", value: "\(manager.hammerShortCount) / \(manager.hammerLongCount)")
+                metricRow("Rotation", value: String(format: "%.2f", manager.liveRotation))
+                metricRow("Acceleration", value: String(format: "%.2f", manager.liveAcceleration))
+            }
+        }
+        .navigationTitle("Metrics")
+    }
+
+    private func metricRow(_ title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value)
+                .multilineTextAlignment(.trailing)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+}
+
+private struct SamplingDetailView: View {
+    @ObservedObject var manager: SensorTrainingManager
+    @ObservedObject var sampleStore: MotionSampleStore
+    @Binding var watchWrist: String
+    @Binding var sampleLabel: MotionSampleLabel
+    @Binding var showingDeleteAllSamplesConfirmation: Bool
+
+    var body: some View {
+        List {
+            Section("Sampling") {
+                Picker("Label", selection: $sampleLabel) {
+                    ForEach(MotionSampleLabel.allCases) { label in
+                        Text(label.title).tag(label)
+                    }
+                }
+                Picker("Watch Wrist", selection: $watchWrist) {
+                    ForEach(WatchWrist.allCases) { wrist in
+                        Text(wrist.title).tag(wrist.rawValue)
+                    }
+                }
+                metricRow("Wrist", value: selectedWatchWrist.title)
+
+                metricRow("Total Saved", value: "\(sampleStore.totalCount)")
+                metricRow("Saved", value: "\(sampleStore.count(for: sampleLabel))")
+                if let latestSample = sampleStore.latest(for: sampleLabel) {
+                    metricRow("Last", value: durationText(latestSample.duration))
+                }
+
+                if let recordingLabel = manager.sampleRecordingLabel {
+                    metricRow("Recording", value: recordingLabel.title)
+                    metricRow("Elapsed", value: durationText(manager.elapsedTime))
+                    metricRow("Frames", value: "\(manager.sampleFramesCaptured)")
+
+                    Button("Stop Recording") {
+                        manager.stopSampleRecording()
+                    }
+                    .tint(.red)
+                } else {
+                    metricRow("Max Length", value: "01:00")
+
+                    Button("Start Long Recording") {
+                        manager.startSampleRecording(
+                            label: sampleLabel,
+                            watchWrist: selectedWatchWrist.detectorWrist,
+                            watchWristName: selectedWatchWrist.title
+                        ) { sample in
+                            sampleStore.save(sample: sample)
+                        }
+                    }
+                    .tint(.blue)
+                    .disabled(manager.sessionState == .active)
+                }
+
+                if manager.sampleRecordingLabel == nil {
+                    Button("Delete Last Sample") {
+                        sampleStore.deleteLatest(for: sampleLabel)
+                    }
+                    .tint(.orange)
+                    .disabled(sampleStore.count(for: sampleLabel) == 0)
+
+                    Button("Delete All \(sampleLabel.title)") {
+                        sampleStore.deleteAll(for: sampleLabel)
+                    }
+                    .tint(.red)
+                    .disabled(sampleStore.count(for: sampleLabel) == 0)
+
+                    Button("Print All Samples JSON") {
+                        let exported = sampleStore.printAllSamplesJSONToConsole()
+                        manager.setStatusText(
+                            exported ? "Exported JSON to console" : "Export failed"
+                        )
+                    }
+                    .disabled(sampleStore.totalCount == 0)
+
+                    Button("Delete All Samples") {
+                        showingDeleteAllSamplesConfirmation = true
+                    }
+                    .tint(.red)
+                    .disabled(sampleStore.totalCount == 0)
+                }
+            }
+        }
+        .navigationTitle("Sampling")
+    }
+
+    private var selectedWatchWrist: WatchWrist {
+        WatchWrist(rawValue: watchWrist) ?? .left
+    }
+
+    private func durationText(_ duration: TimeInterval) -> String {
+        let totalSeconds = Int(duration.rounded(.down))
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func metricRow(_ title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value)
+                .multilineTextAlignment(.trailing)
+                .foregroundStyle(.secondary)
+        }
+    }
+
 }

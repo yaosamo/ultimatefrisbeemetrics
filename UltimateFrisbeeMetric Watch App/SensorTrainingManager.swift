@@ -1,5 +1,6 @@
 import CoreMotion
 import Foundation
+import HealthKit
 
 @MainActor
 final class SensorTrainingManager: ObservableObject {
@@ -28,6 +29,7 @@ final class SensorTrainingManager: ObservableObject {
     @Published private(set) var statusText = "Ready to train"
 
     private let motionManager = CMMotionManager()
+    private let workoutSessionManager = WorkoutSessionManager()
     private let queue = OperationQueue()
     private var timer: Timer?
     private var sampleRecordingWorkItem: DispatchWorkItem?
@@ -47,6 +49,7 @@ final class SensorTrainingManager: ObservableObject {
     }
 
     func start(watchWrist: ThrowDetectionEngine.WatchWrist) {
+        guard sessionState != .active else { return }
         guard motionManager.isDeviceMotionAvailable else {
             sessionState = .unavailable
             statusText = "Motion data unavailable"
@@ -57,70 +60,18 @@ final class SensorTrainingManager: ObservableObject {
             return
         }
 
-        stopLiveUpdates()
-        detector = ThrowDetectionEngine()
-        throwsCount = 0
-        forehandCount = 0
-        backhandCount = 0
-        hammerCount = 0
-        forehandShortCount = 0
-        forehandLongCount = 0
-        backhandShortCount = 0
-        backhandLongCount = 0
-        hammerShortCount = 0
-        hammerLongCount = 0
-        elapsedTime = 0
-        liveRotation = 0
-        liveAcceleration = 0
-        startedAt = Date()
-        sessionOriginTimestamp = nil
-        self.watchWrist = watchWrist
-        sessionState = .active
-        statusText = "Tracking throws"
+        statusText = "Starting workout session"
 
-        motionManager.deviceMotionUpdateInterval = 1.0 / 50.0
-        motionManager.startDeviceMotionUpdates(to: queue) { [weak self] deviceMotion, error in
-            guard let self else { return }
-
-            if let error {
-                Task { @MainActor in
-                    self.sessionState = .unavailable
-                    self.statusText = "Motion error: \(error.localizedDescription)"
-                    self.stopLiveUpdates()
-                }
-                return
+        Task {
+            do {
+                try await workoutSessionManager.start()
+                self.beginMotionTracking(watchWrist: watchWrist, statusText: "Tracking throws")
+            } catch {
+                self.beginMotionTracking(
+                    watchWrist: watchWrist,
+                    statusText: "Tracking throws (no workout session)"
+                )
             }
-
-            guard let deviceMotion else { return }
-            let sample = self.detector.process(deviceMotion: deviceMotion, watchWrist: self.watchWrist)
-            self.logMotionSample(deviceMotion, sample: sample)
-
-            Task { @MainActor in
-                self.sessionOriginTimestamp = self.sessionOriginTimestamp ?? sample.timestamp
-                self.throwsCount = self.detector.state.throwsCount
-                self.forehandCount = self.detector.state.forehandCount
-                self.backhandCount = self.detector.state.backhandCount
-                self.hammerCount = self.detector.state.hammerCount
-                self.forehandShortCount = self.detector.state.forehandShortCount
-                self.forehandLongCount = self.detector.state.forehandLongCount
-                self.backhandShortCount = self.detector.state.backhandShortCount
-                self.backhandLongCount = self.detector.state.backhandLongCount
-                self.hammerShortCount = self.detector.state.hammerShortCount
-                self.hammerLongCount = self.detector.state.hammerLongCount
-                self.liveRotation = sample.rotationalSpeed
-                self.liveAcceleration = sample.accelerationMagnitude
-
-                if sample.throwDetected {
-                    let throwTitle = sample.throwStyle?.title ?? "Throw"
-                    let powerTitle = sample.throwPower?.title ?? ""
-                    self.statusText = powerTitle.isEmpty ? "\(throwTitle) detected" : "\(powerTitle) \(throwTitle) detected"
-                }
-            }
-        }
-
-        timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
-            guard let self, let startedAt = self.startedAt else { return }
-            self.elapsedTime = Date().timeIntervalSince(startedAt)
         }
     }
 
@@ -264,8 +215,80 @@ final class SensorTrainingManager: ObservableObject {
         statusText = "Session canceled"
     }
 
+    private func beginMotionTracking(
+        watchWrist: ThrowDetectionEngine.WatchWrist,
+        statusText: String
+    ) {
+        stopLiveUpdates()
+        detector = ThrowDetectionEngine()
+        throwsCount = 0
+        forehandCount = 0
+        backhandCount = 0
+        hammerCount = 0
+        forehandShortCount = 0
+        forehandLongCount = 0
+        backhandShortCount = 0
+        backhandLongCount = 0
+        hammerShortCount = 0
+        hammerLongCount = 0
+        elapsedTime = 0
+        liveRotation = 0
+        liveAcceleration = 0
+        startedAt = Date()
+        sessionOriginTimestamp = nil
+        self.watchWrist = watchWrist
+        sessionState = .active
+        self.statusText = statusText
+
+        motionManager.deviceMotionUpdateInterval = 1.0 / 50.0
+        motionManager.startDeviceMotionUpdates(to: queue) { [weak self] deviceMotion, error in
+            guard let self else { return }
+
+            if let error {
+                Task { @MainActor in
+                    self.sessionState = .unavailable
+                    self.statusText = "Motion error: \(error.localizedDescription)"
+                    self.stopLiveUpdates()
+                }
+                return
+            }
+
+            guard let deviceMotion else { return }
+            let sample = self.detector.process(deviceMotion: deviceMotion, watchWrist: self.watchWrist)
+            self.logMotionSample(deviceMotion, sample: sample)
+
+            Task { @MainActor in
+                self.sessionOriginTimestamp = self.sessionOriginTimestamp ?? sample.timestamp
+                self.throwsCount = self.detector.state.throwsCount
+                self.forehandCount = self.detector.state.forehandCount
+                self.backhandCount = self.detector.state.backhandCount
+                self.hammerCount = self.detector.state.hammerCount
+                self.forehandShortCount = self.detector.state.forehandShortCount
+                self.forehandLongCount = self.detector.state.forehandLongCount
+                self.backhandShortCount = self.detector.state.backhandShortCount
+                self.backhandLongCount = self.detector.state.backhandLongCount
+                self.hammerShortCount = self.detector.state.hammerShortCount
+                self.hammerLongCount = self.detector.state.hammerLongCount
+                self.liveRotation = sample.rotationalSpeed
+                self.liveAcceleration = sample.accelerationMagnitude
+
+                if sample.throwDetected {
+                    let throwTitle = sample.throwStyle?.title ?? "Throw"
+                    let powerTitle = sample.throwPower?.title ?? ""
+                    self.statusText = powerTitle.isEmpty ? "\(throwTitle) detected" : "\(powerTitle) \(throwTitle) detected"
+                }
+            }
+        }
+
+        timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
+            guard let self, let startedAt = self.startedAt else { return }
+            self.elapsedTime = Date().timeIntervalSince(startedAt)
+        }
+    }
+
     private func stopLiveUpdates() {
         motionManager.stopDeviceMotionUpdates()
+        workoutSessionManager.end()
         timer?.invalidate()
         timer = nil
         sampleRecordingWorkItem?.cancel()

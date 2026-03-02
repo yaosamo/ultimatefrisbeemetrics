@@ -13,6 +13,7 @@
 		A00000000000000000000014 /* ThrowDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000004 /* ThrowDetectionEngine.swift */; };
 		A00000000000000000000015 /* TrainingSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000005 /* TrainingSessionStore.swift */; };
 		A00000000000000000000016 /* MotionSampleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000007 /* MotionSampleStore.swift */; };
+		A00000000000000000000017 /* WorkoutSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000008 /* WorkoutSessionManager.swift */; };
 		B00000000000000000000011 /* TrainingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* TrainingModels.swift */; };
 		B00000000000000000000012 /* CompanionSyncPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* CompanionSyncPayload.swift */; };
 		B00000000000000000000013 /* CompanionSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* CompanionSyncManager.swift */; };
@@ -30,6 +31,8 @@
 		A00000000000000000000004 /* ThrowDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrowDetectionEngine.swift; sourceTree = "<group>"; };
 		A00000000000000000000005 /* TrainingSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSessionStore.swift; sourceTree = "<group>"; };
 		A00000000000000000000007 /* MotionSampleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionSampleStore.swift; sourceTree = "<group>"; };
+		A00000000000000000000008 /* WorkoutSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionManager.swift; sourceTree = "<group>"; };
+		A00000000000000000000009 /* UltimateFrisbeeMetricWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UltimateFrisbeeMetricWatch.entitlements; sourceTree = "<group>"; };
 		A00000000000000000000006 /* UltimateFrisbeeMetric Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "UltimateFrisbeeMetric Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B00000000000000000000001 /* TrainingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingModels.swift; sourceTree = "<group>"; };
 		B00000000000000000000002 /* CompanionSyncPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSyncPayload.swift; sourceTree = "<group>"; };
@@ -77,6 +80,8 @@
 				A00000000000000000000004 /* ThrowDetectionEngine.swift */,
 				A00000000000000000000005 /* TrainingSessionStore.swift */,
 				A00000000000000000000007 /* MotionSampleStore.swift */,
+				A00000000000000000000008 /* WorkoutSessionManager.swift */,
+				A00000000000000000000009 /* UltimateFrisbeeMetricWatch.entitlements */,
 				B00000000000000000000003 /* CompanionSyncManager.swift */,
 			);
 			path = "UltimateFrisbeeMetric Watch App";
@@ -193,6 +198,7 @@
 				A00000000000000000000014 /* ThrowDetectionEngine.swift in Sources */,
 				A00000000000000000000015 /* TrainingSessionStore.swift in Sources */,
 				A00000000000000000000016 /* MotionSampleStore.swift in Sources */,
+				A00000000000000000000017 /* WorkoutSessionManager.swift in Sources */,
 				B00000000000000000000011 /* TrainingModels.swift in Sources */,
 				B00000000000000000000012 /* CompanionSyncPayload.swift in Sources */,
 				B00000000000000000000013 /* CompanionSyncManager.swift in Sources */,
@@ -220,13 +226,16 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "UltimateFrisbeeMetric Watch App/UltimateFrisbeeMetricWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 6J57A4298A;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = UltimateFrisbeeMetric;
-				INFOPLIST_KEY_NSMotionUsageDescription = "Motion data is used to detect frisbee throws and catches during training.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Motion data is used to detect frisbee throws during training.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Health access is used to run workout sessions during training on Apple Watch.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Health access is used to run workout sessions during training on Apple Watch.";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
@@ -239,7 +248,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 8.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Debug;
 		};
@@ -249,13 +258,16 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "UltimateFrisbeeMetric Watch App/UltimateFrisbeeMetricWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 6J57A4298A;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = UltimateFrisbeeMetric;
-				INFOPLIST_KEY_NSMotionUsageDescription = "Motion data is used to detect frisbee throws and catches during training.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Motion data is used to detect frisbee throws during training.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Health access is used to run workout sessions during training on Apple Watch.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Health access is used to run workout sessions during training on Apple Watch.";
 				INFOPLIST_KEY_WKApplication = YES;
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
@@ -268,7 +280,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 8.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Release;
 		};

@@ -5,6 +5,8 @@ import WatchConnectivity
 final class CompanionSyncManager: NSObject, ObservableObject, WCSessionDelegate {
     private let encoder = JSONEncoder()
     private let session: WCSession?
+    private var activationState: WCSessionActivationState = .notActivated
+    private var pendingContext: [String: Any] = [:]
 
     override init() {
         if WCSession.isSupported() {
@@ -20,21 +22,21 @@ final class CompanionSyncManager: NSObject, ObservableObject, WCSessionDelegate 
     }
 
     func syncSessions(_ sessions: [TrainingSessionSummary]) {
-        guard let session else { return }
+        guard session != nil else { return }
         guard let sessionsData = try? encoder.encode(sessions) else { return }
 
-        var context = session.applicationContext
+        var context = currentContext()
         context[CompanionSyncPayload.sessionsKey] = sessionsData
-        try? session.updateApplicationContext(context)
+        update(context: context)
     }
 
     func syncLiveMetrics(_ metrics: LiveMetricsSnapshot) {
-        guard let session else { return }
+        guard session != nil else { return }
         guard let metricsData = try? encoder.encode(metrics) else { return }
 
-        var context = session.applicationContext
+        var context = currentContext()
         context[CompanionSyncPayload.liveMetricsKey] = metricsData
-        try? session.updateApplicationContext(context)
+        update(context: context)
     }
 
     nonisolated func session(
@@ -42,5 +44,28 @@ final class CompanionSyncManager: NSObject, ObservableObject, WCSessionDelegate 
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: Error?
     ) {
+        Task { @MainActor in
+            self.activationState = activationState
+            guard activationState == .activated else { return }
+
+            let contextToSend = self.pendingContext
+            self.pendingContext = [:]
+            if !contextToSend.isEmpty {
+                try? session.updateApplicationContext(contextToSend)
+            }
+        }
+    }
+
+    private func currentContext() -> [String: Any] {
+        if activationState == .activated, let session {
+            return session.applicationContext
+        }
+        return pendingContext
+    }
+
+    private func update(context: [String: Any]) {
+        pendingContext = context
+        guard activationState == .activated, let session else { return }
+        try? session.updateApplicationContext(context)
     }
 }
