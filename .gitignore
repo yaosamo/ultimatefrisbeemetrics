@@ -11,3 +11,10 @@ Package.resolved
 
 # macOS
 .DS_Store
+
+# Local analysis data
+samples.json
+
+# Python
+__pycache__/
+*.pyc

@@ -1,18 +1,5 @@
 import Foundation
 
-struct TrainingSessionSummary: Codable, Identifiable, Equatable {
-    let id: UUID
-    let startedAt: Date
-    let duration: TimeInterval
-    let throwsCount: Int
-    let catchesCount: Int
-
-    var catchRate: Double {
-        guard throwsCount > 0 else { return 0 }
-        return Double(catchesCount) / Double(throwsCount)
-    }
-}
-
 @MainActor
 final class TrainingSessionStore: ObservableObject {
     @Published private(set) var sessions: [TrainingSessionSummary] = []

@@ -29,6 +29,18 @@ This is a training prototype, not a game-officiating system. Thresholds are inte
 3. Run on an Apple Watch or watchOS simulator.
 4. Start a training session from the main screen.
 
+## Motion Sample Analysis
+
+1. Record labeled motion sessions on the watch from the `Sampling` section.
+2. In Xcode, tap `Print All Samples JSON` and copy the export between `[SampleExport] BEGIN` and `[SampleExport] END` into a file such as `samples.json`.
+3. Run:
+
+```bash
+python3 scripts/analyze_motion_samples.py samples.json
+```
+
+The script accepts either the raw JSON export or a full Xcode console log containing the export markers. It segments likely throws from long recordings, prints per-label feature summaries, and suggests a first-pass forehand/backhand threshold rule you can move back into the watch classifier.
+
 ## Sensor notes
 
 `CoreMotion` is available on Apple Watch, but realistic throw and catch detection needs testing on physical hardware. The current detector is built to be understandable and easy to tune rather than overly complex.
