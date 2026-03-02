@@ -15,6 +15,13 @@ final class SensorTrainingManager: ObservableObject {
     @Published private(set) var throwsCount = 0
     @Published private(set) var forehandCount = 0
     @Published private(set) var backhandCount = 0
+    @Published private(set) var hammerCount = 0
+    @Published private(set) var forehandShortCount = 0
+    @Published private(set) var forehandLongCount = 0
+    @Published private(set) var backhandShortCount = 0
+    @Published private(set) var backhandLongCount = 0
+    @Published private(set) var hammerShortCount = 0
+    @Published private(set) var hammerLongCount = 0
     @Published private(set) var elapsedTime: TimeInterval = 0
     @Published private(set) var liveRotation = 0.0
     @Published private(set) var liveAcceleration = 0.0
@@ -55,6 +62,13 @@ final class SensorTrainingManager: ObservableObject {
         throwsCount = 0
         forehandCount = 0
         backhandCount = 0
+        hammerCount = 0
+        forehandShortCount = 0
+        forehandLongCount = 0
+        backhandShortCount = 0
+        backhandLongCount = 0
+        hammerShortCount = 0
+        hammerLongCount = 0
         elapsedTime = 0
         liveRotation = 0
         liveAcceleration = 0
@@ -86,12 +100,20 @@ final class SensorTrainingManager: ObservableObject {
                 self.throwsCount = self.detector.state.throwsCount
                 self.forehandCount = self.detector.state.forehandCount
                 self.backhandCount = self.detector.state.backhandCount
+                self.hammerCount = self.detector.state.hammerCount
+                self.forehandShortCount = self.detector.state.forehandShortCount
+                self.forehandLongCount = self.detector.state.forehandLongCount
+                self.backhandShortCount = self.detector.state.backhandShortCount
+                self.backhandLongCount = self.detector.state.backhandLongCount
+                self.hammerShortCount = self.detector.state.hammerShortCount
+                self.hammerLongCount = self.detector.state.hammerLongCount
                 self.liveRotation = sample.rotationalSpeed
                 self.liveAcceleration = sample.accelerationMagnitude
 
                 if sample.throwDetected {
                     let throwTitle = sample.throwStyle?.title ?? "Throw"
-                    self.statusText = "\(throwTitle) detected"
+                    let powerTitle = sample.throwPower?.title ?? ""
+                    self.statusText = powerTitle.isEmpty ? "\(throwTitle) detected" : "\(powerTitle) \(throwTitle) detected"
                 }
             }
         }
@@ -190,6 +212,13 @@ final class SensorTrainingManager: ObservableObject {
             throwsCount: throwsCount,
             forehandCount: forehandCount,
             backhandCount: backhandCount,
+            hammerCount: hammerCount,
+            forehandShortCount: forehandShortCount,
+            forehandLongCount: forehandLongCount,
+            backhandShortCount: backhandShortCount,
+            backhandLongCount: backhandLongCount,
+            hammerShortCount: hammerShortCount,
+            hammerLongCount: hammerLongCount,
             liveRotation: liveRotation,
             liveAcceleration: liveAcceleration
         )
@@ -209,10 +238,18 @@ final class SensorTrainingManager: ObservableObject {
         let summary = TrainingSessionSummary(
             id: UUID(),
             startedAt: startedAt,
+            sessionWrist: watchWrist.title,
             duration: elapsedTime,
             throwsCount: throwsCount,
             forehandCount: forehandCount,
-            backhandCount: backhandCount
+            backhandCount: backhandCount,
+            hammerCount: hammerCount,
+            forehandShortCount: forehandShortCount,
+            forehandLongCount: forehandLongCount,
+            backhandShortCount: backhandShortCount,
+            backhandLongCount: backhandLongCount,
+            hammerShortCount: hammerShortCount,
+            hammerLongCount: hammerLongCount
         )
 
         stopLiveUpdates()
@@ -241,6 +278,13 @@ final class SensorTrainingManager: ObservableObject {
         throwsCount = 0
         forehandCount = 0
         backhandCount = 0
+        hammerCount = 0
+        forehandShortCount = 0
+        forehandLongCount = 0
+        backhandShortCount = 0
+        backhandLongCount = 0
+        hammerShortCount = 0
+        hammerLongCount = 0
         elapsedTime = 0
         liveRotation = 0
         liveAcceleration = 0
@@ -293,7 +337,7 @@ final class SensorTrainingManager: ObservableObject {
         print(
             String(
                 format: """
-                [Motion] t=%.3f rot=(%.3f, %.3f, %.3f) rotMag=%.3f accel=(%.3f, %.3f, %.3f) accelMag=%.3f gravity=(%.3f, %.3f, %.3f) wristSpin=%.3f throw=%@
+                [Motion] t=%.3f rot=(%.3f, %.3f, %.3f) rotMag=%.3f accel=(%.3f, %.3f, %.3f) accelMag=%.3f gravity=(%.3f, %.3f, %.3f) wristSpin=%.3f lateralSweep=%.3f throw=%@
                 """,
                 sample.timestamp,
                 rotation.x,
@@ -308,8 +352,20 @@ final class SensorTrainingManager: ObservableObject {
                 gravity.y,
                 gravity.z,
                 sample.wristSpin,
+                sample.lateralSweep,
                 sample.throwStyle?.title ?? (sample.throwDetected ? "yes" : "no")
             )
         )
+    }
+}
+
+private extension ThrowDetectionEngine.WatchWrist {
+    var title: String {
+        switch self {
+        case .left:
+            return "Left"
+        case .right:
+            return "Right"
+        }
     }
 }

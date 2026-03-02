@@ -2,24 +2,84 @@ import CoreMotion
 import Foundation
 
 enum MotionSampleLabel: String, CaseIterable, Identifiable, Codable {
-    case forehand
-    case backhand
-    case hammer
-    case catchSample = "catch"
+    case forehandShort = "forehand_short"
+    case forehandLong = "forehand_long"
+    case backhandShort = "backhand_short"
+    case backhandLong = "backhand_long"
+    case hammerShort = "hammer_short"
+    case hammerLong = "hammer_long"
+
+    private enum LegacyRawValue: String {
+        case forehand
+        case backhand
+        case hammer
+        case catchSample = "catch"
+    }
+
+    static var allCases: [MotionSampleLabel] {
+        [
+            .backhandShort,
+            .backhandLong,
+            .forehandShort,
+            .forehandLong,
+            .hammerShort,
+            .hammerLong,
+        ]
+    }
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .forehand:
-            return "Forehand"
-        case .backhand:
-            return "Backhand"
-        case .hammer:
-            return "Hammer"
-        case .catchSample:
-            return "Catch"
+        case .forehandShort:
+            return "Forehand Short"
+        case .forehandLong:
+            return "Forehand Long"
+        case .backhandShort:
+            return "Backhand Short"
+        case .backhandLong:
+            return "Backhand Long"
+        case .hammerShort:
+            return "Hammer Short"
+        case .hammerLong:
+            return "Hammer Long"
         }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+
+        if let label = MotionSampleLabel(rawValue: rawValue) {
+            self = label
+            return
+        }
+
+        guard let legacyLabel = LegacyRawValue(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unknown motion sample label: \(rawValue)"
+            )
+        }
+
+        switch legacyLabel {
+        case .forehand:
+            self = .forehandLong
+        case .backhand:
+            self = .backhandLong
+        case .hammer:
+            self = .hammerLong
+        case .catchSample:
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Catch samples are no longer supported."
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 
@@ -119,6 +179,11 @@ final class MotionSampleStore: ObservableObject {
         persist()
     }
 
+    func deleteAllSamples() {
+        samples.removeAll()
+        persist()
+    }
+
     func exportAllSamplesJSON() -> String? {
         let export = MotionSampleExport(
             exportedAt: Date(),
@@ -143,11 +208,10 @@ final class MotionSampleStore: ObservableObject {
 
     private func load() {
         if let data = try? Data(contentsOf: storageURL) {
-            do {
-                samples = try decoder.decode([LabeledMotionSample].self, from: data)
+            samples = decodeSamples(from: data)
+            if !samples.isEmpty {
+                persist()
                 return
-            } catch {
-                samples = []
             }
         }
 
@@ -158,13 +222,39 @@ final class MotionSampleStore: ObservableObject {
         let defaults = UserDefaults.standard
         guard let data = defaults.data(forKey: storageKey) else { return }
 
+        let migratedSamples = decodeSamples(from: data)
+        guard !migratedSamples.isEmpty else {
+            defaults.removeObject(forKey: storageKey)
+            samples = []
+            return
+        }
+
         do {
-            samples = try decoder.decode([LabeledMotionSample].self, from: data)
+            samples = migratedSamples
             persist()
             defaults.removeObject(forKey: storageKey)
         } catch {
             samples = []
         }
+    }
+
+    private func decodeSamples(from data: Data) -> [LabeledMotionSample] {
+        if let decoded = try? decoder.decode([LabeledMotionSample].self, from: data) {
+            return decoded
+        }
+
+        if let rawSamples = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            let filteredSamples = rawSamples.filter { sample in
+                guard let label = sample["label"] as? String else { return false }
+                return label != "catch"
+            }
+            if JSONSerialization.isValidJSONObject(filteredSamples),
+               let filteredData = try? JSONSerialization.data(withJSONObject: filteredSamples) {
+                return (try? decoder.decode([LabeledMotionSample].self, from: filteredData)) ?? []
+            }
+        }
+
+        return []
     }
 
     private func persist() {

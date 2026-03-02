@@ -21,7 +21,8 @@ struct TrainingDashboardView: View {
     @EnvironmentObject private var sessionStore: TrainingSessionStore
     @EnvironmentObject private var sampleStore: MotionSampleStore
     @AppStorage("watch_wrist") private var watchWrist = WatchWrist.left.rawValue
-    @State private var sampleLabel = MotionSampleLabel.forehand
+    @State private var sampleLabel = MotionSampleLabel.forehandShort
+    @State private var showingDeleteAllSamplesConfirmation = false
     @StateObject private var manager = SensorTrainingManager()
 
     var body: some View {
@@ -42,6 +43,15 @@ struct TrainingDashboardView: View {
         }
         .onChange(of: manager.liveMetricsSnapshot) { snapshot in
             companionSync.syncLiveMetrics(snapshot)
+        }
+        .alert("Delete all samples?", isPresented: $showingDeleteAllSamplesConfirmation) {
+            Button("Delete All", role: .destructive) {
+                sampleStore.deleteAllSamples()
+                manager.setStatusText("Deleted all samples")
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove every saved recording from the watch.")
         }
     }
 
@@ -76,7 +86,11 @@ struct TrainingDashboardView: View {
         Section("Metrics") {
             metricRow("Throws", value: "\(manager.throwsCount)")
             metricRow("Forehand", value: "\(manager.forehandCount)")
+            metricRow("F Short/Long", value: "\(manager.forehandShortCount) / \(manager.forehandLongCount)")
             metricRow("Backhand", value: "\(manager.backhandCount)")
+            metricRow("B Short/Long", value: "\(manager.backhandShortCount) / \(manager.backhandLongCount)")
+            metricRow("Hammer", value: "\(manager.hammerCount)")
+            metricRow("H Short/Long", value: "\(manager.hammerShortCount) / \(manager.hammerLongCount)")
             metricRow("Rotation", value: String(format: "%.2f", manager.liveRotation))
             metricRow("Acceleration", value: String(format: "%.2f", manager.liveAcceleration))
         }
@@ -95,9 +109,15 @@ struct TrainingDashboardView: View {
                         Text(session.startedAt, style: .time)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                        Text("\(session.sessionWrist) wrist")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                         Text("\(session.throwsCount) throws")
                             .font(.caption)
-                        Text("\(session.forehandCount) forehands, \(session.backhandCount) backhands")
+                        Text("\(session.forehandCount) forehands, \(session.backhandCount) backhands, \(session.hammerCount) hammers")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text("F \(session.forehandShortCount)/\(session.forehandLongCount)  B \(session.backhandShortCount)/\(session.backhandLongCount)  H \(session.hammerShortCount)/\(session.hammerLongCount)")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         Text(durationText(session.duration))
@@ -117,8 +137,6 @@ struct TrainingDashboardView: View {
                     Text(wrist.title).tag(wrist.rawValue)
                 }
             }
-
-            metricRow("Selected", value: selectedWristTitle)
         }
     }
 
@@ -179,6 +197,12 @@ struct TrainingDashboardView: View {
                         exported ? "Exported JSON to console" : "Export failed"
                     )
                 }
+                .disabled(sampleStore.totalCount == 0)
+
+                Button("Delete All Samples") {
+                    showingDeleteAllSamplesConfirmation = true
+                }
+                .tint(.red)
                 .disabled(sampleStore.totalCount == 0)
             }
         }
