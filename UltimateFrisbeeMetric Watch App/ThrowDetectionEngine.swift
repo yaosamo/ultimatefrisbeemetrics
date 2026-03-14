@@ -77,13 +77,12 @@ struct ThrowDetectionEngine {
         case right
     }
 
-    // Learned from current left-handed sample data:
-    // hammer has strongly negative release-window gravityY, forehand has
-    // positive lateral sweep plus positive post-release Z spin, and backhand
-    // is the remaining class.
+    // Family thresholds are tuned in wrist-normalized space so the same rule
+    // can work for either watch wrist. Hammer remains conservative until more
+    // labeled hammer data is available.
     private let hammerGravityYThreshold = 0.10
-    private let forehandLateralSweepThreshold = 0.30
-    private let forehandPostSpinThreshold = 2.0
+    private let forehandLateralSweepThreshold = 0.05
+    private let forehandPostSpinThreshold = 1.4
     private let forehandLongPostSpinThreshold = 7.0
     private let backhandLongAccelerationThreshold = 7.0
     private let hammerLongGravityZThreshold = -0.35
